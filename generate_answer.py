@@ -1,39 +1,29 @@
-# generate_answer.py
-from openai import OpenAI
-from database import retrieve_context, client  # reuse same client
+from database import client
 
-def generate_answer(context: str, question: str):
+def generate_answer(context: str, question: str) -> str:
     prompt = f"""
-You are a helpful assistant.
-Answer ONLY using the provided context.
+You are an assistant answering questions based on an internal document.
+
+Rules:
+- Use ONLY the facts explicitly present in the context.
+- You MAY rephrase, expand, and explain those facts in a natural, user-friendly way.
+- Do NOT add new facts that are not stated or clearly implied.
+- If some details are missing, explain them carefully without guessing.
+- Do NOT mention the word "context" or explain limitations unless necessary.
 
 Context:
 {context}
 
-Question:
+User question:
 {question}
 
-Answer:
+Write a clear, professional, human-friendly answer.
 """
 
     response = client.responses.create(
         model="gpt-4o-mini",
         input=prompt,
-        temperature=0
+        temperature=0.3
     )
 
-    return response.output_text
-
-
-if __name__ == "__main__":
-    print("🤖 RAG Chatbot (type 'exit' to stop)\n")
-
-    while True:
-        query = input("You: ")
-        if query.lower() == "exit":
-            break
-
-        context = retrieve_context(query)
-        answer = generate_answer(context, query)
-
-        print("\nBot:", answer)
+    return response.output[0].content[0].text

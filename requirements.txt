@@ -5,3 +5,11 @@ chromadb
 python-dotenv
 tiktoken
 langchain
+pydantic
+pydantic-settings
+python-multipart
+pypdf
+fastapi
+uvicorn
+streamlit
+requests
