@@ -12,3 +12,5 @@ streamlit
 requests
 pymongo
 passlib
+sentence-transformers
+bcrypt

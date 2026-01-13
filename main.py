@@ -2,6 +2,11 @@ from fastapi import FastAPI
 from app.routes.upload_file_route import router
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth_routes import auth_router
+from dotenv import load_dotenv
+from db.sqlite_db import init_db
+load_dotenv()
+
+init_db()
 app = FastAPI(
     title="RAG Document API",
     version="1.0.0"

@@ -1,0 +1,98 @@
+# from openai import OpenAI
+# from db.database import retrieve_context
+# import os
+# from dotenv import load_dotenv
+# load_dotenv()
+#
+# client = OpenAI(api_key="OPENAI_API_KEY")
+# def generate_answer(question: str, chat_history: list) -> str:
+#     # 🔹 FREE step (local)
+#     context = retrieve_context(question)
+#
+#     history_text = ""
+#     for chat in chat_history:
+#         history_text += f"""
+#         User: {chat['question']}
+#         Assistant: {chat['answer']}
+#         """
+#         prompt = f"""
+#         You are an assistant answering questions based on an internal document.
+#
+#         Rules:
+#         - Use ONLY the facts explicitly present in the context.
+#         - You MAY rephrase, expand, and explain those facts in a natural, user-friendly way.
+#         - Do NOT add new facts that are not stated or clearly implied.
+#         - If some details are missing, explain them carefully without guessing.
+#         - Do NOT mention the word "context" or explain limitations unless necessary.
+#         - At the emd give some confidence score out of 100
+#
+#         Conversation history (for tone & continuity only):
+#         {history_text}
+#         Document context:
+#         {context}
+#         Current user question:
+#         {question}
+#         Write a clear, professional, human-friendly answer.
+#         """
+#         print(prompt)
+#         response = client.responses.create(
+#             model="gpt-4o-mini",
+#             input=prompt,
+#             temperature=0.3
+#         )
+#
+#         return response.output[0].content[0].text
+
+from openai import OpenAI
+from db.database import retrieve_context
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# ✅ FIX 1: read API key correctly
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def generate_answer(question: str, chat_history: list) -> str:
+    # 🔹 Retrieve context
+    context = retrieve_context(question)
+
+    history_text = ""
+    for chat in chat_history:
+        history_text += f"""
+User: {chat['question']}
+Assistant: {chat['answer']}
+"""
+
+    # ✅ FIX 2: prompt must be OUTSIDE the loop
+    prompt = f"""
+You are an assistant answering questions based on an internal document.
+
+Rules:
+- Use ONLY the facts explicitly present in the document.
+- You MAY rephrase and explain those facts.
+- Do NOT add new facts.
+- If details are missing, say so clearly.
+- Do NOT mention the word "context".
+- At the end give a confidence score out of 100.
+
+Conversation history:
+{history_text}
+
+Document:
+{context}
+
+Question:
+{question}
+
+Write a clear, professional answer.
+"""
+
+    response = client.responses.create(
+        model="gpt-4o-mini",
+        input=prompt,
+        temperature=0.3
+    )
+
+    # ✅ FIX 3: safe extraction (never returns None)
+    return response.output_text.strip() if response.output_text else "No answer generated."
