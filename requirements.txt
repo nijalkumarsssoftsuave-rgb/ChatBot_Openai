@@ -1,10 +1,7 @@
-langchain-community
-langchain-text-splitters
+
 openai
 chromadb
 python-dotenv
-tiktoken
-langchain
 pydantic
 pydantic-settings
 python-multipart
@@ -13,3 +10,5 @@ fastapi
 uvicorn
 streamlit
 requests
+pymongo
+passlib

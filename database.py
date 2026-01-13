@@ -10,10 +10,8 @@ API_KEY = os.getenv("OPENAI_API_KEY")
 if not API_KEY:
     raise RuntimeError("OPENAI_API_KEY not found")
 
-# OpenAI client (single instance)
 client = OpenAI(api_key=API_KEY)
 
-# Persistent ChromaDB
 chroma_client = chromadb.Client(
     Settings(persist_directory="./chroma_db")
 )

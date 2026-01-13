@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from app.routes.upload_file_route import router
 from fastapi.middleware.cors import CORSMiddleware
-
+from app.routes.auth_routes import auth_router
 app = FastAPI(
     title="RAG Document API",
     version="1.0.0"
@@ -17,3 +17,4 @@ app.add_middleware(
 
 # Register routes
 app.include_router(router)
+app.include_router(auth_router)

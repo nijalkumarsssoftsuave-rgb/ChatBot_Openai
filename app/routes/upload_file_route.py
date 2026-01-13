@@ -1,12 +1,14 @@
 # upload_routes.py
 import os
 import uuid
-from fastapi import APIRouter, UploadFile, File, HTTPException,Query
+from fastapi import APIRouter, UploadFile, File, HTTPException,Query,Depends
 from pypdf import PdfReader
 from database import retrieve_context
 from generate_answer import generate_answer
 from database import collection, create_embedding
-
+from app.model.chat_db import save_chat, get_last_chats
+from utils.jwt_utils import TokenPayload
+from utils.JWT_Token import JWTBearer
 router = APIRouter()
 
 UPLOAD_DIR = "uploads"
@@ -59,11 +61,36 @@ async def upload_pdf(file: UploadFile = File(...)):
     }
 
 @router.post("/ask")
-def ask_question(question: str = Query(..., min_length=1)):
+def ask_question(
+    question: str,
+    user: TokenPayload = Depends(JWTBearer())
+):
     context = retrieve_context(question)
 
-    if not context.strip():
-        return {"answer": "No relevant information found in the document."}
+    chat_history = get_last_chats(user.id, limit=10)
 
-    answer = generate_answer(context, question)
+    answer = generate_answer(context, question, chat_history)
+    save_chat(user.id, question, answer)
     return {"answer": answer}
+
+@router.get("/chats")
+def get_chat_history(
+    user: TokenPayload = Depends(JWTBearer())
+):
+    chats = get_last_chats(user.id, limit=10)
+    return [
+        {
+            "question": chat["question"],
+            "answer": chat["answer"]
+        }
+        for chat in chats
+    ]
+@router.get("/chats")
+def get_chats(user: TokenPayload = Depends(JWTBearer())):
+    chats = get_last_chats(user.id)
+
+    return [
+        {"question": c["question"], "answer": c["answer"]}
+        for c in chats
+    ]
+
