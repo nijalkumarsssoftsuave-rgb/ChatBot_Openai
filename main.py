@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth_routes import auth_router
 from dotenv import load_dotenv
 from db.sqlite_db import init_db
+from app.routes.admin_seating_routes import admin_router
 load_dotenv()
 
 init_db()
@@ -23,3 +24,4 @@ app.add_middleware(
 # Register routes
 app.include_router(router)
 app.include_router(auth_router)
+app.include_router(admin_router)

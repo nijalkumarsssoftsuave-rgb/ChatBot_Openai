@@ -17,6 +17,7 @@ def signup(email: str, password: str):
 @auth_router.post("/login", response_model=TokenResponse)
 def login(email: str, password: str):
     user = authenticate_user(email, password)
+    # print(user)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 

@@ -51,19 +51,6 @@ def create_refresh_token(subject: TokenRequest) -> str:
     encoded_jwt = jwt.encode(to_encode, JWT_REFRESH_SECRET_KEY, ALGORITHM)
     return encoded_jwt
 
-# def decode_jwt(token: str, is_refresh: bool) -> dict:
-#     try:
-#         if is_refresh:
-#             key = JWT_REFRESH_SECRET_KEY
-#         else:
-#             key = JWT_SECRET_KEY
-#         decoded_token = jwt.decode(token, key, algorithms=[ALGORITHM])
-#         token_payload = TokenPayload(**decoded_token)
-#         return decoded_token if datetime.fromtimestamp(token_payload.exp) >= datetime.now() else None
-#
-#     except Exception as e:
-#         print(e)
-#         return {}
 def decode_jwt(token: str, is_refresh: bool) -> dict | None:
     try:
         key = JWT_REFRESH_SECRET_KEY if is_refresh else JWT_SECRET_KEY

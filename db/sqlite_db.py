@@ -19,6 +19,15 @@ def init_db():
     )
     """)
 
+    #admin table
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS admins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL
+    )
+    """)
+
     # Chat history table
     cur.execute("""
     CREATE TABLE IF NOT EXISTS chat_history (

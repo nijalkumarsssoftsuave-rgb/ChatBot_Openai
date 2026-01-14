@@ -24,8 +24,9 @@ def create_user(email: str, password: str):
     conn.close()
 
     return {"id": user_id, "email": email}
-
 def authenticate_user(email: str, password: str):
+    email = email.strip().lower()
+
     conn = get_connection()
     cur = conn.cursor()
 
@@ -33,16 +34,16 @@ def authenticate_user(email: str, password: str):
         "SELECT id, password FROM users WHERE email = ?",
         (email,)
     )
+
     row = cur.fetchone()
     conn.close()
 
-    if not row:
+    if row is None:
         return None
 
     user_id, stored_hash = row
-    password_bytes = _normalize_password(password)
 
-    if not checkpw(password_bytes, stored_hash.encode("utf-8")):
+    if not checkpw(_normalize_password(password), stored_hash.encode()):
         return None
 
     return {"id": user_id, "email": email}
