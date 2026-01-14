@@ -13,7 +13,7 @@ def signup(email: str, password: str):
 
     return {"message": "Signup successful"}
 
-@auth_router.post("/login", response_model=TokenResponse)
+# @auth_router.post("/login", response_model=TokenResponse)
 @auth_router.post("/login", response_model=TokenResponse)
 def login(email: str, password: str):
     user = authenticate_user(email, password)

@@ -35,7 +35,6 @@ def chunk_text(text: str, chunk_size: int = 300, overlap: int = 50) -> list[str]
         end = start + chunk_size
         chunks.append(" ".join(words[start:end]))
         start += chunk_size - overlap
-
     return chunks
 
 # ---------- Routes ----------
