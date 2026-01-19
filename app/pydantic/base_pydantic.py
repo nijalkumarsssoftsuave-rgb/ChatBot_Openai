@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 class TokenRequest(BaseModel):
     id: str
     email: str
+    role: str
 
 
 class TokenPayload(BaseModel):

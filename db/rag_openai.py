@@ -27,8 +27,6 @@ You are an assistant answering questions based on an internal document.
          - Do NOT add new facts that are not stated or clearly implied.
          - If some details are missing, explain them carefully without guessing.
          - Do NOT mention the word "context" or explain limitations unless necessary.
-         - At the emd give some confidence score out of 100
-
 
 Conversation history:
 {history_text}
@@ -48,5 +46,4 @@ Write a clear, professional answer.
         temperature=0.3
     )
 
-    # ✅ FIX 3: safe extraction (never returns None)
     return response.output_text.strip() if response.output_text else "No answer generated."

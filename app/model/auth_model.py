@@ -2,48 +2,71 @@ from bcrypt import gensalt, hashpw, checkpw
 from utils.jwt_utils import _normalize_password
 from db.sqlite_db import get_connection
 
-def create_user(email: str, password: str):
-    conn = get_connection()
-    cur = conn.cursor()
+# -----------------------
+# CREATE USER / ADMIN
+# -----------------------
+def create_user(email: str, password: str, role: str = "user"):
+    email = email.strip().lower()
+    conn = None
 
-    cur.execute("SELECT id FROM users WHERE email = ?", (email,))
-    if cur.fetchone():
-        conn.close()
-        return None
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
 
-    password_bytes = _normalize_password(password)
-    hashed_password = hashpw(password_bytes, gensalt()).decode("utf-8")
+        cur.execute("SELECT id FROM users WHERE email = ?", (email,))
+        if cur.fetchone():
+            return None
 
-    cur.execute(
-        "INSERT INTO users (email, password) VALUES (?, ?)",
-        (email, hashed_password)
-    )
-    conn.commit()
+        password_bytes = _normalize_password(password)
+        hashed_password = hashpw(password_bytes, gensalt()).decode("utf-8")
 
-    user_id = cur.lastrowid
-    conn.close()
+        cur.execute(
+            "INSERT INTO users (email, password, role) VALUES (?, ?, ?)",
+            (email, hashed_password, role)
+        )
+        conn.commit()
 
-    return {"id": user_id, "email": email}
+        return {
+            "id": cur.lastrowid,
+            "email": email,
+            "role": role
+        }
+
+    finally:
+        if conn is not None:
+            conn.close()
+
+# -----------------------
+# AUTHENTICATE USER / ADMIN
+# -----------------------
 def authenticate_user(email: str, password: str):
     email = email.strip().lower()
+    conn = None
 
-    conn = get_connection()
-    cur = conn.cursor()
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
 
-    cur.execute(
-        "SELECT id, password FROM users WHERE email = ?",
-        (email,)
-    )
+        cur.execute(
+            "SELECT id, password, role FROM users WHERE email = ?",
+            (email,)
+        )
+        row = cur.fetchone()
 
-    row = cur.fetchone()
-    conn.close()
+        if not row:
+            return None
 
-    if row is None:
-        return None
+        user_id, stored_hash, role = row
 
-    user_id, stored_hash = row
+        if not checkpw(_normalize_password(password), stored_hash.encode()):
+            return None
 
-    if not checkpw(_normalize_password(password), stored_hash.encode()):
-        return None
+        return {
+            "id": user_id,
+            "email": email,
+            "role": role
+        }
 
-    return {"id": user_id, "email": email}
+    finally:
+        if conn is not None:
+            conn.close()

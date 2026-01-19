@@ -1,16 +1,36 @@
 from db.sqlite_db import get_connection
-
 def save_employee(data: dict):
+    """
+    Saves employee onboarding result.
+    Prevents duplicate submissions by email.
+    """
+
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-    INSERT INTO employees (
-        name, email, phone, tech_stack,
-        tenth_percentage, twelfth_percentage,
-        eligibility_status, seat_number
+    # Prevent duplicate entry
+    cur.execute(
+        "SELECT id FROM employees WHERE email = ?",
+        (data["email"],)
     )
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    exists = cur.fetchone()
+
+    if exists:
+        conn.close()
+        return  # silently ignore duplicate submissions
+
+    cur.execute("""
+        INSERT INTO employees (
+            name,
+            email,
+            phone,
+            tech_stack,
+            tenth,
+            twelfth,
+            status,
+            seat
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (
         data["name"],
         data["email"],

@@ -4,7 +4,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes.auth_routes import auth_router
 from dotenv import load_dotenv
 from db.sqlite_db import init_db
-from app.routes.admin_seating_routes import admin_router
+from app.routes.admin_auth_routes import admin_auth_router
+from app.routes.seating_routes import seating_router
+from app.routes.onboarding_chatbot import onboarding_router
+
 load_dotenv()
 
 init_db()
@@ -13,7 +16,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS (required if frontend / Swagger / Postman is used)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -21,7 +23,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Register routes
 app.include_router(router)
 app.include_router(auth_router)
-app.include_router(admin_router)
+app.include_router(admin_auth_router)
+app.include_router(seating_router)
+app.include_router(onboarding_router)

@@ -13,20 +13,38 @@ def init_db():
     # Users table
     cur.execute("""
     CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        email TEXT UNIQUE NOT NULL,
-        password TEXT NOT NULL
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL CHECK (role IN ('user', 'admin'))
     )
     """)
 
-    #admin table
+    #employee table
     cur.execute("""
-    CREATE TABLE IF NOT EXISTS admins (
+    CREATE TABLE IF NOT EXISTS employees (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL
+    phone TEXT NOT NULL,
+    tech_stack TEXT NOT NULL,
+    tenth REAL NOT NULL,
+    twelfth REAL NOT NULL,
+    status TEXT NOT NULL,
+    seat TEXT
+)
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS seating (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    row_number INTEGER NOT NULL,
+    column_number INTEGER NOT NULL,
+    tech_stack TEXT NOT NULL,
+    employee_id TEXT
     )
     """)
+
 
     # Chat history table
     cur.execute("""

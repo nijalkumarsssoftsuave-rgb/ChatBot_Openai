@@ -7,13 +7,12 @@ auth_router = APIRouter()
 
 @auth_router.post("/signup")
 def signup(email: str, password: str):
-    user = create_user(email, password)
+    user = create_user(email, password ,role="user")
     if not user:
         raise HTTPException(400, "User already exists")
 
     return {"message": "Signup successful"}
 
-# @auth_router.post("/login", response_model=TokenResponse)
 @auth_router.post("/login", response_model=TokenResponse)
 def login(email: str, password: str):
     user = authenticate_user(email, password)
@@ -23,7 +22,8 @@ def login(email: str, password: str):
 
     token_request = TokenRequest(
         id=str(user["id"]),        # ✅ FIXED
-        email=user["email"]
+        email=user["email"],
+        role=user["role"]
     )
 
     access_token = create_access_token(token_request)
