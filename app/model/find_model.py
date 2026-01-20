@@ -20,7 +20,6 @@ def get_user_by_id(user_id: int):
     finally:
         conn.close()
 
-
 def get_user_by_email(email: str):
     conn = get_connection()
     try:

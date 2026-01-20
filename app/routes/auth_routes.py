@@ -4,7 +4,6 @@ from app.pydantic.base_pydantic import TokenRequest, TokenResponse
 from fastapi import HTTPException,APIRouter
 
 auth_router = APIRouter()
-
 @auth_router.post("/signup")
 def signup(email: str, password: str):
     user = create_user(email, password ,role="user")
@@ -16,7 +15,6 @@ def signup(email: str, password: str):
 @auth_router.post("/login", response_model=TokenResponse)
 def login(email: str, password: str):
     user = authenticate_user(email, password)
-    # print(user)
     if not user:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 

@@ -67,30 +67,43 @@ async def upload_pdf(
         "message": "PDF uploaded and indexed as vectors",
         "chunks_stored": len(chunks)
     }
-
-
-@router.post("/ask")
-def ask_question(
-    question: str,
-    user: TokenPayload = Depends(JWTBearer())
-):
-    # Retrieve relevant vector context
-    context = retrieve_context(question)
-
-    # Load chat history from SQLite
-    chat_history = get_last_chats(int(user.id), limit=10)
-
-    # Generate answer (RAG)
-    answer = generate_answer(question, chat_history)
-
-    # Store chat in SQLite
-    save_chat(int(user.id), question, answer)
-
-    return {"answer": answer}
-
-
 @router.get("/chats")
 def get_chat_history(
     user: TokenPayload = Depends(JWTBearer())
 ):
-    return get_last_chats(int(user.id), limit=10)
+    user_id = int(user.id)
+
+    try:
+        chats = get_last_chats(user_id, limit=20)
+    except HTTPException:
+        raise HTTPException(
+            status_code=404,
+            detail="No chat history found"
+        )
+
+    return {
+        "user_id": user_id,
+        "history": chats
+    }
+
+
+# @router.post("/ask")
+# def ask_question(
+#     question: str,
+#     user: TokenPayload = Depends(JWTBearer())
+# ):
+#     # Retrieve relevant vector context
+#     context = retrieve_context(question)
+#
+#     # Load chat history from SQLite
+#     chat_history = get_last_chats(int(user.id), limit=10)
+#
+#     # Generate answer (RAG)
+#     answer = generate_answer(question, chat_history)
+#
+#     # Store chat in SQLite
+#     save_chat(int(user.id), question, answer)
+#
+#     return {"answer": answer}
+
+

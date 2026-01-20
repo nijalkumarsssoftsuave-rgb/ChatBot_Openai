@@ -32,16 +32,33 @@ def init_db():
     twelfth REAL NOT NULL,
     status TEXT NOT NULL,
     seat TEXT
-)
+    )
     """)
 
+    # cur.execute("""
+    # CREATE TABLE IF NOT EXISTS seating (
+    # id INTEGER PRIMARY KEY AUTOINCREMENT,
+    # tech_stack TEXT NOT NULL,
+    # row_number INTEGER NOT NULL,
+    # column_number INTEGER NOT NULL,
+    # employee_email TEXT,
+    # UNIQUE (tech_stack, row_number, column_number)
+    # )
+    # """)
+
     cur.execute("""
+    
     CREATE TABLE IF NOT EXISTS seating (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     row_number INTEGER NOT NULL,
     column_number INTEGER NOT NULL,
-    tech_stack TEXT NOT NULL,
-    employee_id TEXT
+    tech_stack TEXT NOT NULL CHECK (
+        tech_stack IN ('python', 'java', 'node', 'qa')
+    ),
+    occupied INTEGER NOT NULL DEFAULT 0,
+    employee_id INTEGER,
+    UNIQUE (tech_stack, row_number, column_number),
+    FOREIGN KEY (employee_id) REFERENCES employees(id)
     )
     """)
 

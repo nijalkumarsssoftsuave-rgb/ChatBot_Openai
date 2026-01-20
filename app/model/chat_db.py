@@ -1,4 +1,5 @@
 from db.sqlite_db import get_connection
+from fastapi import HTTPException
 
 def save_chat(user_id: int, question: str, answer: str):
     conn = get_connection()
@@ -15,7 +16,7 @@ def save_chat(user_id: int, question: str, answer: str):
     conn.commit()
     conn.close()
 
-def get_last_chats(user_id: int, limit: int = 10):
+def get_last_chats(user_id: int, limit: int = 20):
     conn = get_connection()
     cur = conn.cursor()
 
@@ -32,6 +33,13 @@ def get_last_chats(user_id: int, limit: int = 10):
 
     rows = cur.fetchall()
     conn.close()
+
+
+    if not rows:
+        raise HTTPException(
+            status_code=404,
+            detail="No chat history found for this user"
+        )
 
     # Oldest → newest
     return [{"question": q, "answer": a} for q, a in rows[::-1]]

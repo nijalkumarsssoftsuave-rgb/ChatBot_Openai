@@ -15,10 +15,8 @@ def create_seating(
             status_code=400,
             detail="row_allocation length must match rows"
         )
-
     conn = get_connection()
     cur = conn.cursor()
-
     try:
         cur.execute("DELETE FROM seating")
 
@@ -29,18 +27,14 @@ def create_seating(
                     INSERT INTO seating (row_number, column_number, tech_stack, employee_id)
                     VALUES (?, ?, ?, NULL)
                 """, (row_idx + 1, col_idx, tech))
-
         conn.commit()
     finally:
         conn.close()
-
     return {
         "message": "Seating arrangement created successfully",
         "rows": data.rows,
         "cols": data.cols
     }
-
-
 @seating_router.get("/view")
 def view_seating():
     conn = get_connection()
@@ -58,7 +52,6 @@ def view_seating():
 
     if not rows:
         return {"message": "No seating arrangement has been created yet."}
-
     seating = {}
     for r, c, tech, emp in rows:
         seating.setdefault(f"R{r}", []).append({

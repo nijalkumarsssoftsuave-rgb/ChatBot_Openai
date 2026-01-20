@@ -1,4 +1,5 @@
 from typing import Optional
+from app.service.email_service import send_email
 
 def send_selected_with_seat_email(
     to_email: str,
@@ -23,7 +24,7 @@ Tech Stack: {tech_stack.capitalize()}
 We look forward to welcoming you on board.
 """
 
-    _send_email(to_email, subject, body, pdf_path)
+    send_email(to_email, subject, body)
 
 
 def send_selected_no_seat_email(
@@ -44,7 +45,7 @@ Your seat will be assigned on your joining day.
 Please find your joining letter attached.
 """
 
-    _send_email(to_email, subject, body, pdf_path)
+    send_email(to_email, subject, body)
 
 
 def send_rejection_email(
@@ -64,7 +65,7 @@ This decision does not reflect your potential, and we encourage you to apply aga
 We wish you the very best in your career journey.
 """
 
-    _send_email(to_email, subject, body, None)
+    send_email(to_email, subject, body)
 
 
 # ----------------------------------------------------------------

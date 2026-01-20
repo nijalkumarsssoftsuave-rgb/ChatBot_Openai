@@ -1,26 +1,24 @@
-from fastapi import APIRouter
+import uuid
 import re
+from fastapi import APIRouter, Request, Response, Depends, HTTPException
+from utils.JWT_Token import JWTBearer
+from app.pydantic.base_pydantic import TokenPayload
+from db.database import retrieve_context
 from db.rag_openai import generate_answer
+from app.model.chat_db import save_chat, get_last_chats
 from app.model.onboarding_db import save_employee
-
-
+from app.model.seating_db import allocate_seat
+from app.service.onboarding_service import (
+    send_selected_with_seat_email,
+    send_selected_no_seat_email,
+    send_rejection_email
+)
 onboarding_router = APIRouter(prefix="/chatbot")
 
-# --------------------
-# Onboarding intent
-# --------------------
 ONBOARDING_KEYWORDS = {
     "onboarding", "join", "apply", "job", "career", "hr", "recruitment"
 }
 
-# --------------------
-# Session store
-# --------------------
-onboarding_sessions = {}
-
-# --------------------
-# Fields & questions
-# --------------------
 FIELDS = ["full_name", "email", "phone", "tech_stack", "tenth", "twelfth"]
 
 TECH_STACKS = {"python", "java", "node", "qa"}
@@ -33,19 +31,23 @@ QUESTIONS = {
     "tenth": "What is your 10th standard percentage?",
     "twelfth": "What is your 12th standard percentage?"
 }
+onboarding_sessions = {}
 
-# --------------------
-# Validation
-# --------------------
-def validate(field, value):
+def generate_session_id() -> str:
+    return str(uuid.uuid4())
+
+
+def validate(field: str, value: str) -> bool:
+    value = value.strip()
+
     if field == "full_name":
-        return bool(value.strip())
+        return bool(re.fullmatch(r"[A-Za-z ]{2,}", value))
 
     if field == "email":
-        return re.match(r"^[^@]+@[^@]+\.[^@]+$", value)
+        return bool(re.fullmatch(r"[^@]+@[^@]+\.[^@]+", value))
 
     if field == "phone":
-        return value.isdigit() and len(value) >= 10
+        return bool(re.fullmatch(r"\d{10}", value))
 
     if field == "tech_stack":
         return value.lower() in TECH_STACKS
@@ -59,18 +61,15 @@ def validate(field, value):
 
     return False
 
-def eligible(data):
-    return float(data["tenth"]) > 70 and float(data["twelfth"]) > 70
+def eligible(data: dict) -> bool:
+    return float(data["tenth"]) >= 70 and float(data["twelfth"]) >= 70
 
-# --------------------
-# Onboarding flow
-# --------------------
-def handle_onboarding(session_id, message):
+def handle_onboarding(session_id: str, message: str) -> str:
     session = onboarding_sessions[session_id]
     field = FIELDS[session["step"]]
 
     if not validate(field, message):
-        return {"reply": f"That doesn’t seem valid. {QUESTIONS[field]}"}
+        return f"That doesn’t seem valid. {QUESTIONS[field]}"
 
     session["data"][field] = (
         message.lower() if field == "tech_stack" else message.strip()
@@ -78,28 +77,31 @@ def handle_onboarding(session_id, message):
     session["step"] += 1
 
     if session["step"] < len(FIELDS):
-        return {"reply": QUESTIONS[FIELDS[session["step"]]]}
+        return QUESTIONS[FIELDS[session["step"]]]
 
     summary = session["data"]
-    return {
-        "reply": (
-            "Thanks for sharing your details. Let me quickly verify eligibility.\n\n"
-            f"• Name: {summary['full_name']}\n"
-            f"• Email: {summary['email']}\n"
-            f"• Tech Stack: {summary['tech_stack']}\n"
-            f"• 10th %: {summary['tenth']}\n"
-            f"• 12th %: {summary['twelfth']}\n\n"
-            "Please type **confirm** to proceed."
+    return (
+        "Thanks for sharing your details. Let me quickly verify eligibility.\n\n"
+        f"• Name: {summary['full_name']}\n"
+        f"• Email: {summary['email']}\n"
+        f"• Tech Stack: {summary['tech_stack']}\n"
+        f"• 10th %: {summary['tenth']}\n"
+        f"• 12th %: {summary['twelfth']}\n\n"
+        "Please type **confirm** to proceed."
+    )
+
+def finalize_onboarding(session_id: str) -> str:
+    data = onboarding_sessions.pop(session_id)["data"]
+    is_eligible = eligible(data)
+
+    seat_number = None
+    if is_eligible:
+        seat_number = allocate_seat(
+            tech_stack=data["tech_stack"],
+            employee_email=data["email"]
         )
-    }
 
-def finalize_onboarding(session_id):
-    session = onboarding_sessions.pop(session_id)
-    data = session["data"]
-
-    is_eligible = float(data["tenth"]) > 70 and float(data["twelfth"]) > 70
-
-    employee_payload = {
+    save_employee({
         "name": data["full_name"],
         "email": data["email"],
         "phone": data["phone"],
@@ -107,37 +109,64 @@ def finalize_onboarding(session_id):
         "tenth": float(data["tenth"]),
         "twelfth": float(data["twelfth"]),
         "status": "selected" if is_eligible else "rejected",
-        "seat": None   # seating can be added later
-    }
-
-    # ✅ SAVE TO DB
-    save_employee(employee_payload)
+        "seat": seat_number
+    })
 
     if is_eligible:
-        return {
-            "reply": (
-                "✅ You meet the eligibility criteria.\n\n"
-                "Your details have been successfully recorded. "
-                "Our HR team will guide you through the next steps."
+        if seat_number:
+            send_selected_with_seat_email(
+                to_email=data["email"],
+                name=data["full_name"],
+                seat_number=seat_number,
+                tech_stack=data["tech_stack"],
+                pdf_path=None
             )
-        }
+            return (
+                "✅ You meet the eligibility criteria.\n\n"
+                f"Your seat has been allocated (Seat: {seat_number}). "
+                "Please check your email for onboarding details."
+            )
 
-    return {
-        "reply": (
-            "Thank you for your interest.\n\n"
-            "Your details have been recorded. "
-            "At this time, you do not meet the eligibility criteria. "
-            "We encourage you to reapply in the future."
+        send_selected_no_seat_email(
+            to_email=data["email"],
+            name=data["full_name"],
+            pdf_path=None
         )
-    }
+        return (
+            "✅ You meet the eligibility criteria.\n\n"
+            "Currently, seating is fully occupied. "
+            "You will receive seat details on your joining day."
+        )
 
-
-# --------------------
-# Chatbot endpoint
-# --------------------
+    send_rejection_email(
+        to_email=data["email"],
+        name=data["full_name"]
+    )
+    return (
+        "Thank you for your interest.\n\n"
+        "At this time, you do not meet the eligibility criteria."
+    )
 @onboarding_router.post("/message")
-def chatbot(message: str, session_id: str):
+def chatbot(
+    message: str,
+    request: Request,
+    response: Response,
+    user: TokenPayload = Depends(JWTBearer())
+):
+    user_id = int(user.id)
     msg = message.strip().lower()
+
+    # session_id only for onboarding
+    session_id = request.cookies.get("session_id")
+
+    if not session_id:
+        session_id = generate_session_id()
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            samesite="lax"
+        )
 
     if msg == "clear all data":
         onboarding_sessions.pop(session_id, None)
@@ -145,12 +174,32 @@ def chatbot(message: str, session_id: str):
 
     if session_id in onboarding_sessions:
         if msg == "confirm":
-            return finalize_onboarding(session_id)
-        return handle_onboarding(session_id, message)
+            reply = finalize_onboarding(session_id)
+            save_chat(user_id, message, reply)
+            return {"reply": reply}
+
+        reply = handle_onboarding(session_id, message)
+        save_chat(user_id, message, reply)
+        return {"reply": reply}
 
     if any(k in msg for k in ONBOARDING_KEYWORDS):
         onboarding_sessions[session_id] = {"step": 0, "data": {}}
-        return {"reply": "Sure. I’ll help you with onboarding.\n\n" + QUESTIONS["full_name"]}
+        reply = "Sure. I’ll help you with onboarding.\n\n" + QUESTIONS["full_name"]
+        save_chat(user_id, message, reply)
+        return {"reply": reply}
 
-    answer = generate_answer(message, [])
+    try:
+        history = get_last_chats(user_id, limit=20)
+    except HTTPException:
+        history = []
+
+    context = retrieve_context(message)
+
+    answer = generate_answer(
+        question=message,
+        chat_history=history,
+        context=context
+    )
+
+    save_chat(user_id, message, answer)
     return {"reply": answer}

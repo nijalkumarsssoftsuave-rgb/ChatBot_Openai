@@ -15,3 +15,4 @@ sentence-transformers
 bcrypt
 reportlab
 pandas
+aiosmtplib
