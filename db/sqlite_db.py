@@ -20,6 +20,7 @@ def init_db():
     )
     """)
 
+
     #employee table
     cur.execute("""
     CREATE TABLE IF NOT EXISTS employees (
@@ -35,16 +36,6 @@ def init_db():
     )
     """)
 
-    # cur.execute("""
-    # CREATE TABLE IF NOT EXISTS seating (
-    # id INTEGER PRIMARY KEY AUTOINCREMENT,
-    # tech_stack TEXT NOT NULL,
-    # row_number INTEGER NOT NULL,
-    # column_number INTEGER NOT NULL,
-    # employee_email TEXT,
-    # UNIQUE (tech_stack, row_number, column_number)
-    # )
-    # """)
 
     cur.execute("""
     
@@ -62,7 +53,6 @@ def init_db():
     )
     """)
 
-
     # Chat history table
     cur.execute("""
     CREATE TABLE IF NOT EXISTS chat_history (
@@ -75,5 +65,14 @@ def init_db():
     )
     """)
 
+    cur.execute(
+        """
+        CREATE TABLE if not exists user_otp (
+        email TEXT PRIMARY KEY,
+        password TEXT NOT NULL,
+        otp_hash TEXT NOT NULL,
+        expires_at INTEGER NOT NULL
+        )
+        """)
     conn.commit()
     conn.close()

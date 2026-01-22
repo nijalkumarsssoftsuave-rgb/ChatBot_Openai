@@ -1,85 +1,55 @@
-from typing import Optional
-from app.service.email_service import send_email
-
-def send_selected_with_seat_email(
-    to_email: str,
-    name: str,
-    seat_number: str,
-    tech_stack: str,
-    pdf_path: Optional[str] = None
-):
-    subject = "SoftSuave Onboarding – Selection Confirmed"
-
-    body = f"""
-Hi {name},
-
-We are pleased to inform you that you have successfully cleared the onboarding criteria.
-
-Your joining details are attached in the PDF.
-
-Seat Allocation:
-Seat Number: {seat_number}
-Tech Stack: {tech_stack.capitalize()}
-
-We look forward to welcoming you on board.
-"""
-
-    send_email(to_email, subject, body)
+from app.service.intent_service import detect_intent
+from app.service.onboarding_engine import (
+    start_onboarding,
+    handle_onboarding,
+    finalize_onboarding,
+    cancel_onboarding
+)
+from db.database import retrieve_context
+from db.rag_openai import generate_answer
+from app.model.chat_db import get_last_chats, save_chat
 
 
-def send_selected_no_seat_email(
-    to_email: str,
-    name: str,
-    pdf_path: Optional[str] = None
-):
-    subject = "SoftSuave Onboarding – Selection Update"
+def handle_chatbot_message(
+    *,
+    user_id: int,
+    message: str,
+    session: dict
+) -> dict:
 
-    body = f"""
-Hi {name},
+    intent = detect_intent(message, session.get("mode"))
 
-Congratulations on clearing the onboarding process.
+    # 1️⃣ Cancel onboarding
+    if intent == "onboarding_cancel":
+        reply = cancel_onboarding(session)
+        save_chat(user_id, message, reply)
+        return {"reply": reply}
 
-Currently, seating for your tech stack is fully occupied.
-Your seat will be assigned on your joining day.
+    # 2️⃣ Start onboarding
+    if intent == "onboarding_start" and session.get("mode") != "onboarding":
+        reply = start_onboarding(session)
+        save_chat(user_id, message, reply)
+        return {"reply": reply}
 
-Please find your joining letter attached.
-"""
+    # 3️⃣ Continue onboarding
+    if session.get("mode") == "onboarding":
+        if message.lower() == "confirm":
+            reply = finalize_onboarding(session)
+            save_chat(user_id, message, reply)
+            return {"reply": reply}
 
-    send_email(to_email, subject, body)
+        reply = handle_onboarding(session, message)
+        save_chat(user_id, message, reply)
+        return {"reply": reply}
 
+    # 4️⃣ Normal RAG chat
+    history = get_last_chats(user_id)
+    context = retrieve_context(message)
+    answer = generate_answer(
+        question=message,
+        chat_history=history,
+        context=context
+    )
 
-def send_rejection_email(
-    to_email: str,
-    name: str
-):
-    subject = "SoftSuave Onboarding – Application Update"
-
-    body = f"""
-Hi {name},
-
-Thank you for your interest in joining our organization.
-
-After careful review, we regret to inform you that we will not be able to proceed further at this time.
-This decision does not reflect your potential, and we encourage you to apply again in the future.
-
-We wish you the very best in your career journey.
-"""
-
-    send_email(to_email, subject, body)
-
-
-# ----------------------------------------------------------------
-# Internal email sender (replace with SMTP later)
-# ----------------------------------------------------------------
-def _send_email(to_email: str, subject: str, body: str, pdf_path: Optional[str]):
-    """
-    This is a placeholder.
-    Replace with SMTP / SendGrid / SES later.
-    """
-
-    print("===================================")
-    print("TO:", to_email)
-    print("SUBJECT:", subject)
-    print("BODY:", body)
-    print("ATTACHMENT:", pdf_path)
-    print("===================================")
+    save_chat(user_id, message, answer)
+    return {"reply": answer}

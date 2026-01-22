@@ -3,19 +3,17 @@ import uuid
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
 from pypdf import PdfReader
 
-from db.database import store_chunks, retrieve_context
-from db.rag_openai import generate_answer
-from app.model.chat_db import save_chat, get_last_chats
-
+from db.database import store_chunks
+from app.model.chat_db import get_last_chats
+from utils.admin_guard import admin_required
 from utils.jwt_utils import TokenPayload
 from utils.JWT_Token import JWTBearer
 
 router = APIRouter()
 
-UPLOAD_DIR = "uploads"
+UPLOAD_DIR = "extract_uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# ---------- Helpers ----------
 
 def extract_text_from_pdf(file_path: str) -> str:
     reader = PdfReader(file_path)
@@ -37,12 +35,11 @@ def chunk_text(text: str, chunk_size: int = 300, overlap: int = 50) -> list[str]
         start += chunk_size - overlap
     return chunks
 
-# ---------- Routes ----------
 
 @router.post("/upload/pdf")
 async def upload_pdf(
     file: UploadFile = File(...),
-    user: TokenPayload = Depends(JWTBearer())
+    admin=Depends(admin_required)
 ):
     if not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are allowed")
@@ -85,25 +82,5 @@ def get_chat_history(
         "user_id": user_id,
         "history": chats
     }
-
-
-# @router.post("/ask")
-# def ask_question(
-#     question: str,
-#     user: TokenPayload = Depends(JWTBearer())
-# ):
-#     # Retrieve relevant vector context
-#     context = retrieve_context(question)
-#
-#     # Load chat history from SQLite
-#     chat_history = get_last_chats(int(user.id), limit=10)
-#
-#     # Generate answer (RAG)
-#     answer = generate_answer(question, chat_history)
-#
-#     # Store chat in SQLite
-#     save_chat(int(user.id), question, answer)
-#
-#     return {"answer": answer}
 
 

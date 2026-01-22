@@ -11,7 +11,6 @@ def get_user_by_id(user_id: int):
         row = cur.fetchone()
         if not row:
             return None
-
         return {
             "id": row[0],
             "email": row[1],
@@ -34,8 +33,23 @@ def get_user_by_email(email: str):
 
         return {
             "id": row[0],
-            "email": row[1],
-            "role": row[2]
+            "email": row[1]
         }
     finally:
         conn.close()
+
+def get_employee_by_email(email: str) -> bool:
+    conn = get_connection()
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT 1 FROM employees WHERE email = ? LIMIT 1",
+            (email,)
+        )
+        return cur.fetchone() is not None
+    finally:
+        conn.close()
+
+
+
+

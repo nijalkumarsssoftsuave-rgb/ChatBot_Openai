@@ -4,11 +4,8 @@ def save_employee(data: dict):
     Saves employee onboarding result.
     Prevents duplicate submissions by email.
     """
-
     conn = get_connection()
     cur = conn.cursor()
-
-    # Prevent duplicate entry
     cur.execute(
         "SELECT id FROM employees WHERE email = ?",
         (data["email"],)
@@ -18,7 +15,6 @@ def save_employee(data: dict):
     if exists:
         conn.close()
         return  # silently ignore duplicate submissions
-
     cur.execute("""
         INSERT INTO employees (
             name,
@@ -41,6 +37,5 @@ def save_employee(data: dict):
         data["status"],
         data.get("seat")
     ))
-
     conn.commit()
     conn.close()

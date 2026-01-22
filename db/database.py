@@ -1,7 +1,5 @@
 import uuid
 import chromadb
-from ollama import embeddings
-
 from db.embeddings import embed_texts, embed_query
 
 # ✅ Explicit persistent client (disk-only)
@@ -18,7 +16,7 @@ def store_chunks(chunks: list[str]):
         ids=[f"doc_{uuid.uuid4()}" for _ in chunks]
     )
 
-def retrieve_context(query: str, top_k: int = 3) -> str:
+def retrieve_context(query: str, top_k: int = 5) -> str:
     results = collection.query(
         query_embeddings=[embed_query(query)],
         n_results=top_k

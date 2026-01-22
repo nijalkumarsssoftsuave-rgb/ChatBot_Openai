@@ -16,30 +16,26 @@ def save_chat(user_id: int, question: str, answer: str):
     conn.commit()
     conn.close()
 
-def get_last_chats(user_id: int, limit: int = 20):
+def get_last_chats(user_id: int, limit: int = 10):
     conn = get_connection()
-    cur = conn.cursor()
 
-    cur.execute(
-        """
-        SELECT question, answer
-        FROM chat_history
-        WHERE user_id = ?
-        ORDER BY timestamp DESC
-        LIMIT ?
-        """,
-        (user_id, limit)
-    )
-
-    rows = cur.fetchall()
-    conn.close()
-
-
-    if not rows:
-        raise HTTPException(
-            status_code=404,
-            detail="No chat history found for this user"
+    try:
+        cur = conn.cursor()
+        cur.execute(
+            """
+            SELECT question, answer
+            FROM chat_history
+            WHERE user_id = ?
+            ORDER BY timestamp DESC
+            LIMIT ?
+            """,
+            (user_id, limit)
         )
+        rows = cur.fetchall()
+        if not rows:
+            return []
 
     # Oldest → newest
-    return [{"question": q, "answer": a} for q, a in rows[::-1]]
+        return [{"question": q, "answer": a} for q, a in rows[::-1]]
+    finally:
+        conn.close()

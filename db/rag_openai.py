@@ -11,6 +11,9 @@ def generate_answer(
     chat_history: list,
     context: str
 ) -> str:
+
+    print(context)
+
     history_text = ""
     for chat in chat_history:
         history_text += f"""

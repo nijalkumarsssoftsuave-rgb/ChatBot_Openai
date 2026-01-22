@@ -1,27 +1,126 @@
-import smtplib
-from email.message import EmailMessage
-import os
-from dotenv import load_dotenv
+from app.service.pdf_service import generate_seat_pdf
+from app.service.pdf_service import generate_no_seat_pdf
+from utils.email import send_email
 
-load_dotenv()
+def send_otp_email(email: str, otp: str):
+    subject = "Verify your account – OTP"
 
-EMAIL_USERNAME = os.getenv("EMAIL")
-EMAIL_PASSWORD = os.getenv("PASSWORD")
+    body = f"""
+Your One-Time Password (OTP) is:
 
-SMTP_HOST = "smtp.gmail.com"
-SMTP_PORT = 587
+{otp}
 
-def send_email(to_email: str, subject: str, body: str):
-    if not EMAIL_USERNAME or not EMAIL_PASSWORD:
-        raise RuntimeError("Email credentials not found in environment")
+This OTP is valid for 5 minutes.
 
-    msg = EmailMessage()
-    msg["From"] = EMAIL_USERNAME
-    msg["To"] = to_email
-    msg["Subject"] = subject
-    msg.set_content(body)
+If you did not request this, please ignore this email.
+"""
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-        server.starttls()
-        server.login(EMAIL_USERNAME, EMAIL_PASSWORD)
-        server.send_message(msg)
+    send_email(
+        to_email=email,
+        subject=subject,
+        body=body
+    )
+
+
+def send_selected_with_seat_email(
+    to_email: str,
+    name: str,
+    seat_number: str,
+    tech_stack: str,
+):
+    subject = "SoftSuave Onboarding – Selection Confirmed"
+
+    body = f"""
+Hi {name},
+
+We are pleased to inform you that you have successfully cleared the onboarding criteria.
+
+Your seat allocation details are attached as a PDF.
+
+Seat Number: {seat_number}
+Tech Stack: {tech_stack.capitalize()}
+
+We look forward to welcoming you on board.
+"""
+
+    pdf_path = generate_seat_pdf(
+        name=name,
+        seat_number=seat_number,
+        tech_stack=tech_stack
+    )
+
+    send_email(
+        to_email=to_email,
+        subject=subject,
+        body=body,
+        attachment_path=pdf_path
+    )
+
+
+# def send_selected_no_seat_email(
+#     to_email: str,
+#     name: str,
+#     pdf_path: Optional[str] = None
+# ):
+#     subject = "SoftSuave Onboarding – Selection Update"
+#
+#     body = f"""
+# Hi {name},
+#
+# Congratulations on clearing the onboarding process.
+#
+# Currently, seating for your tech stack is fully occupied.
+# Your seat will be assigned on your joining day.
+#
+# Please find your joining letter attached.
+# """
+#
+#     send_email(to_email, subject, body)
+
+
+def send_selected_no_seat_email(
+    to_email: str,
+    name: str
+):
+    subject = "SoftSuave Onboarding – Selection Update"
+
+    body = f"""
+Hi {name},
+
+Congratulations on clearing the onboarding process.
+
+Currently, seating for your tech stack is fully occupied.
+Your seat will be assigned on your joining day.
+
+Please find the onboarding details attached.
+"""
+
+    pdf_path = generate_no_seat_pdf(name=name)
+
+    send_email(
+        to_email=to_email,
+        subject=subject,
+        body=body,
+        attachment_path=pdf_path
+    )
+
+
+def send_rejection_email(
+    to_email: str,
+    name: str
+):
+    subject = "SoftSuave Onboarding – Application Update"
+
+    body = f"""
+Hi {name},
+
+Thank you for your interest in joining our organization.
+
+After careful review, we regret to inform you that we will not be able to proceed further at this time.
+This decision does not reflect your potential, and we encourage you to apply again in the future.
+
+We wish you the very best in your career journey.
+"""
+
+    send_email(to_email, subject, body)
+
